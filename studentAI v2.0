@@ -55,7 +55,7 @@ void microMouseServer::studentAI()
         }
     }
 
-    else {
+    else { // what to do if the mouse is not in the endzone
         
         if (isWallRight() == false) { // if there is no wall to the right,
             turnRight(); // turn right
