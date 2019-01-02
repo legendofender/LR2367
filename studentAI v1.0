@@ -25,7 +25,7 @@ void microMouseServer::studentAI()
     // check surroundings and move based on a priority ranking if multiple paths are open (Order: Right, Forward, Left, Back)
 
 
-    // what to do if the mouse is not in the maze
+    // what to do if the mouse is not in the end
     if (isWallRight() == false) { //if there is no wall to the right,
         turnRight(); //turn right
         moveForward(); //then move forward
