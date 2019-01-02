@@ -1,0 +1,94 @@
+
+#include "micromouseserver.h"
+
+void microMouseServer::studentAI()
+{
+/*
+ * The following are the eight functions that you can call. Feel free to create your own fuctions as well.
+ * Remember that any solution that calls moveForward more than once per call of studentAI() will have points deducted.
+ *
+ *The following functions return if there is a wall in their respective directions
+ *bool isWallLeft();
+ *bool isWallRight();
+ *bool isWallForward();
+ *
+ *The following functions move the mouse. Move forward returns if the mouse was able to move forward and can be used for error checking
+ *bool moveForward();
+ *void turnLeft();
+ *void turnRight();
+ *
+ * The following functions are called when you need to output something to the UI or when you have finished the maze
+ * void foundFinish();
+ * void printUI(const char *mesg);
+*/
+    // Strategy: first, check to see if the mouse is already in the end of the maze. Then,
+    // check surroundings and move based on a priority ranking if multiple paths are open (Order: Right, Forward, Left, Back)
+    
+    /*
+    When the mouse is at the end of the maze at the start of its turn, it will be at one of the four corners of the end (obviously)
+    Only two corners need to be considered because the others can be represented as 180 degree rotations of the first two.
+    This assumes that the mouse does not start facing one of the walls of the endzone, which is not possible as long as the mouse starts in a corner.
+    */
+    
+    if ((isWallForward() || isWallRight()) == false) { // this is one of the corners of the end (if there is an open space in the front and to the right)
+        turnRight(); // despite this being a specific case, in the case that the mouse is not actually in the end, it should just move normally.
+        moveForward();
+        
+        if (isWallLeft() == false) { // however, since it is a special case, it will make an additional check to see if the maze is solved.
+            foundFinish();
+        }
+        
+        else { // if the maze is not solved, it will just do what it would do if it was simply moving in the maze.
+            printUI("Moved right");
+        }
+    }
+    
+    else if ((isWallForward() || isWallLeft()) == false) { // this is the second case in which the maze is solved. (if there is an open space in the front and to the left)
+        moveForward(); // in a normal case, the mouse would move forward.
+        
+        if (isWallLeft() == false) { // as with above, there is an additional check, and if the mouse is in the end, it will print to the UI that the maze is solved.
+            foundFinish();
+        }
+        
+        else { // if not, it will just say it moved forward, in accordance with what it would do outside of an edge case.
+            printUI("Moved Forward");
+        }
+    }
+
+    else {
+        
+        if (isWallRight() == false) { // if there is no wall to the right,
+            turnRight(); // turn right
+            moveForward(); // then move forward
+            printUI("Moved right"); // then output to the user
+        }
+        
+        else { // when there is, just move forward (when possible)
+            
+            if (isWallForward() == false) { // see if you can move forward
+                moveForward(); // if you can, do it
+                printUI("Moved forward"); // then output to the user
+            }
+            
+            else { //if not,
+                
+                if (isWallLeft() == false) { // see if you can move left
+                    turnLeft(); // if you can then do it
+                    moveForward();
+                    printUI("Moved left"); // then output to the user
+                }
+                
+                else { // if you can't, there's only one option left: backwards
+                        turnLeft(); // turn around
+                        turnLeft();
+                        moveForward(); // and move
+                        printUI("Moved backwards"); // then output to the user
+                }
+                
+            }
+            
+        }
+        
+    }
+    
+}
