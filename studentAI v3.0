@@ -1,0 +1,494 @@
+
+#include "micromouseserver.h"
+
+void microMouseServer::studentAI()
+{
+/*
+ * The following are the eight functions that you can call. Feel free to create your own fuctions as well.
+ * Remember that any solution that calls moveForward more than once per call of studentAI() will have points deducted.
+ *
+ *The following functions return if there is a wall in their respective directions
+ *bool isWallLeft();
+ *bool isWallRight();
+ *bool isWallForward();
+ *
+ *The following functions move the mouse. Move forward returns if the mouse was able to move forward and can be used for error checking
+ *bool moveForward();
+ *void turnLeft();
+ *void turnRight();
+ *
+ * The following functions are called when you need to output something to the UI or when you have finished the maze
+ * void foundFinish();
+ * void printUI(const char *mesg);
+*/
+
+    static int paths[20][20]; // a 20x20 matrix to keep track of which paths the mouse has been on, so it won't travel on them
+                              // traversed paths will be marked with scores based on how many times the mouse has traversed them (never more than 2 times)
+    static int turns = 0; // a basic turn counter, useful for initializing the static arrays and for implementing the circular buffer used to detect the end
+    static int direction = 0; // keeps track of the direction in which the mouse is facing as it solves the maze (0 = North, 1 = East, 2 = South, 3 = West)
+    static bool backtracking = false; // the mouse is only allowed to go on a previously marked path/junction if it is backtracking its current path.
+                                      // the mouse should start off backtracking.
+
+    if (turns == 0) { // this is to initialize the paths array to all 0's but only the first time the program is run
+
+        for (int i = 0; i < 20; i++) {
+
+            for (int j = 0; j < 20; j++) {
+
+                paths[i][j] = 0;
+
+            }
+
+        }
+
+    }
+
+    static int pos[2]; // this is an array used to track the mouse's xy position (or rather yx) as it travels through the maze. This helps it to detect unmarked paths and also to mark paths.
+
+    if (turns == 0) { // since the mouse always starts in the bottom left corner of the maze, position should be initialized as such, but once again only on turn 0.
+
+        pos[0] = 19;
+        pos[1] = 0;
+
+    }
+
+    (paths[pos[0]][pos[1]])++; // the mouse should mark the path it is on both when it is exploring it and backtracking it.
+
+    turns++; // incrementing the turn counter
+
+    static int endCheck[3]; // this is the circular buffer mentioned earlier to track the last 3 turns the mouse made (0 is no turn, 1 is right, 2 is double right, 3 is left)
+
+    if (turns == 0) {
+
+        for (int i = 0; i < 3; i++) {
+
+            endCheck[i] = -1;
+
+        }
+
+    }
+
+    // on turn 0, the circular buffer should not have any meaningful data but should still have trash data
+                                                                  // so as to not incur an error in the upcoming loop.
+
+    if ((endCheck[0] == endCheck[1]) && (endCheck[1] == endCheck [2])) { // if the last 3 turns are all the same, a check should trigger to see if the mouse found the end.
+
+        if (endCheck[0] == 1) { // however, this check should only find the finish if the 3 consecutive turns were left or right, showing that the mouse was in a 2x2 space.
+
+            if (isWallRight() == false) { // an additional check is made to ensure that the mouse was not in a c shaped section of the maze. If all of
+                                          // the checks return true, the mouse found the endzone.
+                foundFinish();
+
+            }
+
+            return; // the return stops the mouse from making an additional movement, a bug found in testing.
+
+        }
+
+        else if (endCheck[0] == 3) { // this is identical to above except that this check is for 3 consecutive left turns rather than right.
+
+            if (isWallLeft() == false) {
+
+                foundFinish();
+
+            }
+
+            return;
+
+        }
+
+        else ; // if neither of the above checks proved that the end was found, the loop should just end having done nothing.
+    }
+
+    int forkCounter[3]; // this is an array to determine whether the mouse has reached a junction / fork in the maze.
+
+    for (int i = 0; i < 3; i++) forkCounter[i] = 1; // initializing the counter to assume all paths are open.
+
+    if (isWallRight()) forkCounter[0] = 0; // whenever there is a wall, the value at the index representing that direction will be set to 0.
+
+    if (isWallForward()) forkCounter[1] = 0; // 0 is right, 1 is forward, 2 is left. Backwards does not need to be tested since that is the direction the mouse came from.
+
+    if (isWallLeft()) forkCounter[2] = 0;
+
+    if ((forkCounter[0]+forkCounter[1]+forkCounter[2]) >= 2) { // if 2 or 3 paths are open, the mouse is at a junction.
+
+        (paths[pos[0]][pos[1]]) = 1; // all junctions are marked with a 1 so that the mouse will only revisit them when backtracking.
+        int rightScore = 2; // each prospective path is given a score; these scores are indicative of how many times the mouse has traveled the path. The mouse will
+                            // choose a path by comparing the scores. If there is a tie for lowest score, the right path will be chosen first, then forward, then left.
+                            // the priority order is implemented with the order of the if-else if-else loops.
+
+        switch(direction) { // there is a switch loop here because the score that is fetched is different based on what direction the mouse is facing and which
+                            // prospective path's score is being fetched.
+            case 0:
+                rightScore = paths[pos[0]][pos[1]+1];
+                break;
+            case 1:
+                rightScore = paths[pos[0]+1][pos[1]];
+                break;
+            case 2:
+                rightScore = paths[pos[0]][pos[1]-1];
+                break;
+            case 3:
+                rightScore = paths[pos[0]-1][pos[1]];
+                break;
+
+        }
+
+        int foreScore = 2; // same thing for the forward path...
+
+        switch(direction) {
+
+            case 0:
+                foreScore = paths[pos[0]-1][pos[1]];
+                break;
+            case 1:
+                foreScore = paths[pos[0]][pos[1]+1];
+                break;
+            case 2:
+                foreScore = paths[pos[0]+1][pos[1]];
+                break;
+            case 3:
+                foreScore = paths[pos[0]][pos[1]-1];
+                break;
+
+        }
+
+        int leftScore = 2; // and the left one.
+
+        switch(direction) {
+
+            case 0:
+                leftScore = paths[pos[0]][pos[1]-1];
+                break;
+            case 1:
+                leftScore = paths[pos[0]-1][pos[1]];
+                break;
+            case 2:
+                leftScore = paths[pos[0]][pos[1]+1];
+                break;
+            case 3:
+                leftScore = paths[pos[0]+1][pos[1]];
+                break;
+
+        }
+
+        if ((forkCounter[0] == 1) && (rightScore == 0)) { // if the right path has the lowest score,
+
+                turnRight();
+                moveForward(); // the mouse should go down the right path.
+                endCheck[turns%3] = 1; // its movement/turn should also be tracked into the circular buffer with the number codes mentioned earlier.
+                backtracking = false; // once the mouse is exploring a new path, marked by a score of 0, it is no longer backtracking, so it should treat junctions like dead ends.
+
+                switch(direction) { // another switch loop is used to alter the mouse's yx coordinates based on its direction and movement.
+
+                    case 0:
+                        pos[1]++;
+                        break;
+                    case 1:
+                        pos[0]++;
+                        break;
+                    case 2:
+                        pos[1]--;
+                        break;
+                    case 3:
+                        pos[0]--;
+                        break;
+
+                }
+
+                direction++; // the mouse's direction should be changed to represent the turn
+                direction = direction%4; // and a %4 is added so that the direction is always 0, 1, 2, or 3.
+                printUI("Moved right"); // this might have been unnecessary, but the mouse will output that it moved to its right.
+
+        }
+
+        else if ((forkCounter[1] == 1) && (foreScore == 0)) { // this is the same as above except in the case that the forward path has the lowest score.
+
+                moveForward();
+                endCheck[turns%3] = 0;
+                backtracking = false;
+
+                switch(direction) {
+
+                    case 0:
+                        pos[0]--;
+                        break;
+                    case 1:
+                        pos[1]++;
+                        break;
+                    case 2:
+                        pos[0]++;
+                        break;
+                    case 3:
+                        pos[1]--;
+                        break;
+
+                }
+
+                printUI("Moved forward");
+
+        }
+
+        else if ((forkCounter[2] == 1) && (leftScore == 0)) { // and the same thing with the left path.
+
+                turnLeft();
+                moveForward();
+                endCheck[turns%3] = 3;
+                backtracking = false;
+
+                switch(direction) {
+
+                    case 0:
+                        pos[1]--;
+                        break;
+                    case 1:
+                        pos[0]--;
+                        break;
+                    case 2:
+                        pos[1]++;
+                        break;
+                    case 3:
+                        pos[0]++;
+                        break;
+
+                }
+
+                direction += 3;
+                direction = direction%4;
+                printUI("Moved left");
+
+        }
+
+        else if ((forkCounter[0] == 1) && (rightScore == 1) && (backtracking == true)) { // if there were no new paths to explore, that means that the mouse must be backtracking.
+                                                                                         // if this happens, the mouse should be allowed to go over a path it has already traversed once.
+                turnRight();                                                             // this is part of a separate else if loop to make sure it does not activate unless the other ones
+                moveForward();                                                           // are all false.
+                endCheck[turns%3] = 1;
+
+                switch(direction) {
+                    case 0:
+                        pos[1]++;
+                        break;
+                    case 1:
+                        pos[0]++;
+                        break;
+                    case 2:
+                        pos[1]--;
+                        break;
+                    case 3:
+                        pos[0]--;
+                        break;
+                }
+
+                direction += 1;
+                direction = direction%4;
+                printUI("Moved right");
+
+        }
+
+        else if ((forkCounter[1] == 1) && (foreScore == 1) && (backtracking == true)) { // same as above but with the middle path
+
+                moveForward();
+                endCheck[turns%3] = 0;
+
+                switch(direction) {
+                case 0:
+                    pos[0]--;
+                    break;
+                case 1:
+                    pos[1]++;
+                    break;
+                case 2:
+                    pos[0]++;
+                    break;
+                case 3:
+                    pos[1]--;
+                    break;
+                }
+
+                printUI("Moved forward");
+
+        }
+
+        else if ((forkCounter[2] == 1) && (leftScore == 1) && (backtracking == true)) { // and then with the left.
+
+                turnLeft();
+                moveForward();
+                endCheck[turns%3] = 3;
+
+                switch(direction) {
+                case 0:
+                    pos[0]--;
+                    break;
+                case 1:
+                    pos[1]--;
+                    break;
+                case 2:
+                    pos[0]++;
+                    break;
+                case 3:
+                    pos[1]++;
+                    break;
+                }
+
+                direction += 3;
+                direction = direction%4;
+                printUI("Moved left");
+
+        }
+
+        else { // in the case that all paths have been fully explored/marked with a 2, the mouse should turn around, meaning it is now backtracking again and can revisit junctions.
+
+            turnLeft();
+            turnLeft();
+            moveForward();
+            endCheck[turns%3] = 2;
+            backtracking = true;
+
+            switch(direction) {
+                case 0 :
+                    pos[0]++;
+                    break;
+                case 1 :
+                    pos[1]--;
+                    break;
+                case 2 :
+                    pos[0]--;
+                    break;
+                case 3 :
+                    pos[1]++;
+                    break;
+            }
+
+            direction += 2;
+            direction = direction%4;
+            printUI("Moved back");
+
+        }
+
+    }
+
+
+    else if ((forkCounter[0]+forkCounter[1]+forkCounter[2]) == 0) { // if there are walls in all directions, the mouse is at a dead end. As such, it should turn around
+                                                                    // and toggle its backtracking status to true.
+        turnLeft();
+        turnLeft();
+        moveForward();
+
+        endCheck[turns%3] = 2;
+        (paths[pos[0]][pos[1]])++; // in a dead end, it should mark the end twice because it will only stay in it for 1 turn, but it should be marked as fully explored.
+        backtracking = true;
+
+        switch(direction) {
+
+            case 0 :
+                pos[0]++;
+                break;
+            case 1 :
+                pos[1]--;
+                break;
+            case 2 :
+                pos[0]--;
+                break;
+            case 3 :
+                pos[1]++;
+                break;
+
+        }
+
+        direction += 2;
+        direction = direction%4;
+        printUI("Moved back");
+
+    }
+
+    else { // this case will activate if there is only one available path to take.
+
+        if (!isWallLeft()) { // in these loops, priority does not matter since only one can possibly activate anyway. As such, checks are made to tell the mouse which direction it can move in.
+
+            turnLeft();
+            moveForward();
+            endCheck[turns%3] = 3;
+
+            switch(direction) {
+
+                case 0 :
+                    pos[1]--;
+                    break;
+                case 1 :
+                    pos[0]--;
+                    break;
+                case 2 :
+                    pos[1]++;
+                    break;
+                case 3 :
+                    pos[0]++;
+                    break;
+
+            }
+
+            direction += 3;
+            direction = direction%4;
+            printUI("Moved left");
+
+        }
+
+        else if (!isWallForward()) { // same as above but in the case that the open path is forward
+
+            moveForward();
+            endCheck[turns%3] = 0;
+
+            switch(direction) {
+
+                case 0 :
+                    pos[0]--;
+                    break;
+                case 1 :
+                    pos[1]++;
+                    break;
+                case 2 :
+                    pos[0]++;
+                    break;
+                case 3 :
+                    pos[1]--;
+                    break;
+
+            }
+
+            printUI("Moved forward");
+
+        }
+
+        else { // and in the case that the open path is to the right.
+
+            turnRight();
+            moveForward();
+            endCheck[turns%3] = 1;
+
+            switch(direction) {
+
+                case 0 :
+                    pos[1]++;
+                    break;
+                case 1 :
+                    pos[0]++;
+                    break;
+                case 2 :
+                    pos[1]--;
+                    break;
+                case 3 :
+                    pos[0]--;
+                    break;
+
+            }
+
+            direction++;
+            direction = direction%4;
+            printUI("Moved right");
+
+        }
+
+    }
+
+}
+
